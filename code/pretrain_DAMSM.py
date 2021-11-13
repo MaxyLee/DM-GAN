@@ -5,7 +5,7 @@ from miscc.utils import build_super_images
 from miscc.losses import sent_loss, words_loss
 from miscc.config import cfg, cfg_from_file
 
-from datasets import TextDataset
+from datasets import TextDataset, MMCelebADataset
 from datasets import prepare_data
 
 from model import RNN_ENCODER, CNN_ENCODER
@@ -238,7 +238,10 @@ if __name__ == "__main__":
         transforms.Scale(int(imsize * 76 / 64)),
         transforms.RandomCrop(imsize),
         transforms.RandomHorizontalFlip()])
-    dataset = TextDataset(cfg.DATA_DIR, 'train',
+    # dataset = TextDataset(cfg.DATA_DIR, 'train',
+    #                       base_size=cfg.TREE.BASE_SIZE,
+    #                       transform=image_transform)
+    dataset = MMCelebADataset(cfg.DATA_DIR, 'train',
                           base_size=cfg.TREE.BASE_SIZE,
                           transform=image_transform)
 
@@ -249,7 +252,10 @@ if __name__ == "__main__":
         shuffle=True, num_workers=int(cfg.WORKERS))
 
     # # validation data #
-    dataset_val = TextDataset(cfg.DATA_DIR, 'test',
+    # dataset_val = TextDataset(cfg.DATA_DIR, 'test',
+    #                           base_size=cfg.TREE.BASE_SIZE,
+    #                           transform=image_transform)
+    dataset_val = MMCelebADataset(cfg.DATA_DIR, 'test',
                               base_size=cfg.TREE.BASE_SIZE,
                               transform=image_transform)
     dataloader_val = torch.utils.data.DataLoader(

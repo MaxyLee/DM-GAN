@@ -1,7 +1,7 @@
 CONFIG_NAME: 'DMGAN'
 
-DATASET_NAME: 'birds'
-DATA_DIR: '../data/birds'
+DATASET_NAME: 'mmceleba'
+DATA_DIR: '../data/mm-celeba'
 GPU_ID: 0
 WORKERS: 1
 
@@ -13,10 +13,10 @@ TREE:
 TRAIN:
     FLAG: False
     # NET_G: '../models/bird_DMGAN.pth'
-    NET_G: '/data3/private/mxy/projects/mmda/code/DM-GAN/output/birds_DMGAN_2021_11_09_20_24_16/Model/netG_epoch_330.pth'
+    NET_G: '/data3/private/mxy/projects/mmda/code/DM-GAN/output/mmceleba_DMGAN_2021_11_07_18_50_55/Model/netG_epoch_150.pth'
     B_NET_D: False
     BATCH_SIZE: 6
-    NET_E: '../DAMSMencoders/bird/text_encoder200.pth'
+    NET_E: '../output/mmceleba_DAMSM_2021_11_06_01_50_44/Model/text_encoder200.pth'
 
 
 GAN:

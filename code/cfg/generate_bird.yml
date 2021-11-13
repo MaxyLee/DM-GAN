@@ -11,11 +11,10 @@ TREE:
 
 
 TRAIN:
-    FLAG: False
-    # NET_G: '../models/bird_DMGAN.pth'
-    NET_G: '/data3/private/mxy/projects/mmda/code/DM-GAN/output/birds_DMGAN_2021_11_09_20_24_16/Model/netG_epoch_330.pth'
+    FLAG: True
+    NET_G: '../models/bird_DMGAN.pth'
     B_NET_D: False
-    BATCH_SIZE: 6
+    BATCH_SIZE: 8
     NET_E: '../DAMSMencoders/bird/text_encoder200.pth'
 
 

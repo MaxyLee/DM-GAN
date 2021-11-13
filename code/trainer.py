@@ -16,7 +16,9 @@ from miscc.utils import build_super_images, build_super_images2
 from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
 from datasets import prepare_data
+# from generate_dataset import prepare_data
 from model import RNN_ENCODER, CNN_ENCODER
+# from torch.utils.tensorboard import SummaryWriter
 
 from miscc.losses import words_loss
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
@@ -46,6 +48,9 @@ class condGANTrainer(object):
         self.data_loader = data_loader
         self.dataset = dataset
         self.num_batches = len(self.data_loader)
+
+        # logger
+        # self.logger = SummaryWriter('/data3/private/mxy/projects/mmda/exp/DM-GAN')
 
     def build_models(self):
         def count_parameters(model):
@@ -285,9 +290,12 @@ class condGANTrainer(object):
                 ######################################################
                 errD_total = 0
                 D_logs = ''
+                errDs = []
+                real_accs = []
+                fake_accs = []
                 for i in range(len(netsD)):
                     netsD[i].zero_grad()
-                    errD, log = discriminator_loss(netsD[i], imgs[i], fake_imgs[i],
+                    errD, log, real_acc, fake_acc = discriminator_loss(netsD[i], imgs[i], fake_imgs[i],
                                               sent_emb, real_labels, fake_labels)
                     # backward and update parameters
                     errD.backward()
@@ -295,6 +303,9 @@ class condGANTrainer(object):
                     errD_total += errD
                     D_logs += 'errD%d: %.2f ' % (i, errD.item())
                     D_logs += log
+                    errDs.append(errD.item())
+                    real_accs.append(real_acc)
+                    fake_accs.append(fake_acc)
 
                 #######################################################
                 # (4) Update G network: maximize log(D(G(z)))
@@ -306,7 +317,7 @@ class condGANTrainer(object):
                 # do not need to compute gradient for Ds
                 # self.set_requires_grad_value(netsD, False)
                 netG.zero_grad()
-                errG_total, G_logs = \
+                errG_total, G_logs, g_losses, w_loss, s_loss = \
                     generator_loss(netsD, image_encoder, fake_imgs, real_labels,
                                    words_embs, sent_emb, match_labels, cap_lens, class_ids)
                 kl_loss = KL_loss(mu, logvar)
@@ -319,8 +330,18 @@ class condGANTrainer(object):
                     avg_p.mul_(0.999).add_(0.001, p.data)
 
                 if gen_iterations % 100 == 0:
+                    # global_step = epoch*self.num_batches + step
                     print('Epoch [{}/{}] Step [{}/{}]'.format(epoch, self.max_epoch, step,
                                                               self.num_batches) + ' ' + D_logs + ' ' + G_logs)
+                    # for i, errD in enumerate(errDs):
+                    #     self.logger.add_scalar('errD{}'.format(i), errD, global_step)
+                    #     self.logger.add_scalar('Real Acc{}'.format(i), real_accs[i], global_step)
+                    #     self.logger.add_scalar('Fake Acc{}'.format(i), fake_accs[i], global_step)
+                    # for i, g_loss in enumerate(g_losses):
+                    #     self.logger.add_scalar('g_loss{}'.format(i), g_loss, global_step)
+                    # self.logger.add_scalar('w_loss', w_loss, global_step)
+                    # self.logger.add_scalar('s_loss', s_loss, global_step)
+                    # self.logger.add_scalar('kl_loss', kl_loss.item(), global_step)
                 # save images
                 if gen_iterations % 10000 == 0:
                     backup_para = copy_G_params(netG)
@@ -416,21 +437,22 @@ class condGANTrainer(object):
 
             cnt = 0
             R_count = 0
-            R = np.zeros(30000)
+            num_images = 30000
+            R = np.zeros(num_images)
             cont = True
             for ii in range(11):  # (cfg.TEXT.CAPTIONS_PER_IMAGE):
                 if (cont == False):
                     break
                 for step, data in enumerate(self.data_loader, 0):
-                    cnt += batch_size
                     if (cont == False):
                         break
-                    if step % 100 == 0:
+                    cnt += batch_size
+                    if cnt % 100 == 0:
                        print('cnt: ', cnt)
                     # if step > 50:
                     #     break
-
                     imgs, captions, cap_lens, class_ids, keys = prepare_data(data)
+                    # imgs, captions, cap_lens, class_ids, keys, indices = prepare_data(data)
 
                     hidden = text_encoder.init_hidden(batch_size)
                     # words_embs: batch_size x nef x seq_len
@@ -461,7 +483,9 @@ class condGANTrainer(object):
                         im = im.astype(np.uint8)
                         im = np.transpose(im, (1, 2, 0))
                         im = Image.fromarray(im)
-                        fullpath = '%s_s%d_%d.png' % (s_tmp, k, ii)
+                        # fullpath = '%s_s%d_%d.png' % (s_tmp, k, ii)
+                        # sent_ix = indices[j] % 10
+                        fullpath = '%s_%d.png' % (s_tmp, ii)
                         im.save(fullpath)
 
                     _, cnn_code = image_encoder(fake_imgs[-1])
@@ -482,7 +506,7 @@ class condGANTrainer(object):
                             R[R_count] = 1
                         R_count += 1
 
-                    if R_count >= 30000:
+                    if R_count >= num_images:
                         sum = np.zeros(10)
                         np.random.shuffle(R)
                         for i in range(10):

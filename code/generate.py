@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from miscc.config import cfg, cfg_from_file
+from generate_dataset import TextGenerateDataset
 from datasets import TextDataset, MMCelebADataset, CubDADataset, ConcatDataset
 from trainer import condGANTrainer as trainer
 
@@ -132,14 +133,12 @@ if __name__ == "__main__":
         transforms.Scale(int(imsize * 76 / 64)),
         transforms.RandomCrop(imsize),
         transforms.RandomHorizontalFlip()])
-    if cfg.DATASET_NAME == 'birds':
-        dataset = TextDataset(cfg.DATA_DIR, split_dir,
-                            base_size=cfg.TREE.BASE_SIZE,
-                            transform=image_transform)
-    else:
-        dataset = MMCelebADataset(cfg.DATA_DIR, split_dir,
-                            base_size=cfg.TREE.BASE_SIZE,
-                            transform=image_transform)
+    dataset = TextGenerateDataset(cfg.DATA_DIR, split_dir,
+                          base_size=cfg.TREE.BASE_SIZE,
+                          transform=image_transform)
+    # dataset = MMCelebADataset(cfg.DATA_DIR, split_dir,
+    #                       base_size=cfg.TREE.BASE_SIZE,
+    #                       transform=image_transform)
     assert dataset
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=cfg.TRAIN.BATCH_SIZE,

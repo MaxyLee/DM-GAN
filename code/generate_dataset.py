@@ -27,7 +27,7 @@ else:
 
 
 def prepare_data(data):
-    imgs, captions, captions_lens, class_ids, keys = data
+    imgs, captions, captions_lens, class_ids, keys, indices = data
 
     # sort data by the length in a decreasing order
     sorted_cap_lens, sorted_cap_indices = \
@@ -54,7 +54,7 @@ def prepare_data(data):
         sorted_cap_lens = Variable(sorted_cap_lens)
 
     return [real_imgs, captions, sorted_cap_lens,
-            class_ids, keys]
+            class_ids, keys, indices]
 
 
 def get_imgs(img_path, imsize, bbox=None,
@@ -89,7 +89,7 @@ def get_imgs(img_path, imsize, bbox=None,
     return ret
 
 
-class TextDataset(data.Dataset):
+class TextGenerateDataset(data.Dataset):
     def __init__(self, data_dir, split='train',
                  base_size=64,
                  transform=None, target_transform=None):
@@ -289,8 +289,9 @@ class TextDataset(data.Dataset):
 
     def __getitem__(self, index):
         #
-        key = self.filenames[index]
-        cls_id = self.class_id[index]
+        img_ix = index // self.embeddings_num
+        key = self.filenames[img_ix]
+        cls_id = self.class_id[img_ix]
         #
         if self.bbox is not None:
             bbox = self.bbox[key]
@@ -302,11 +303,8 @@ class TextDataset(data.Dataset):
         img_name = '%s/images/%s.jpg' % (data_dir, key)
         imgs = get_imgs(img_name, self.imsize,
                         bbox, self.transform, normalize=self.norm)
-        # random select a sentence
-        sent_ix = random.randint(0, self.embeddings_num)
-        new_sent_ix = index * self.embeddings_num + sent_ix
-        caps, cap_len = self.get_caption(new_sent_ix)
-        return imgs, caps, cap_len, cls_id, key
+        caps, cap_len = self.get_caption(index)
+        return imgs, caps, cap_len, cls_id, key, index
 
     def get_mis_caption(self, cls_id):
         mis_match_captions_t = []
@@ -331,7 +329,7 @@ class TextDataset(data.Dataset):
         return mis_match_captions.type(torch.LongTensor).cuda(), sorted_cap_lens.type(torch.LongTensor).cuda()
 
     def __len__(self):
-        return len(self.filenames)
+        return len(self.filenames) * self.embeddings_num
 
 class CubDADataset(data.Dataset):
     def __init__(self, da_root,

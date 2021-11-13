@@ -158,8 +158,10 @@ def discriminator_loss(netD, real_imgs, fake_imgs, conditions,
                 (fake_errD + cond_fake_errD + cond_wrong_errD) / 3.)
     else:
         errD = cond_real_errD + (cond_fake_errD + cond_wrong_errD) / 2.
-    log = 'Real_Acc: {:.4f} Fake_Acc: {:.4f} '.format(torch.mean(real_logits).item(), torch.mean(fake_logits).item())
-    return errD, log
+    real_acc = torch.mean(real_logits).item()
+    fake_acc = torch.mean(fake_logits).item()
+    log = 'Real_Acc: {:.4f} Fake_Acc: {:.4f} '.format(real_acc, fake_acc)
+    return errD, log, real_acc, fake_acc
 
 
 def generator_loss(netsD, image_encoder, fake_imgs, real_labels,
@@ -170,6 +172,7 @@ def generator_loss(netsD, image_encoder, fake_imgs, real_labels,
     logs = ''
     # Forward
     errG_total = 0
+    g_losses = []
     for i in range(numDs):
         features = netsD[i](fake_imgs[i])
         cond_logits = netsD[i].COND_DNET(features, sent_emb)
@@ -183,6 +186,7 @@ def generator_loss(netsD, image_encoder, fake_imgs, real_labels,
         errG_total += g_loss
         # err_img = errG_total.data[0]
         logs += 'g_loss%d: %.2f ' % (i, g_loss.item())
+        g_losses.append(g_loss.item())
 
         # Ranking loss
         if i == (numDs - 1):
@@ -225,7 +229,7 @@ def generator_loss(netsD, image_encoder, fake_imgs, real_labels,
         # errG_total += w_loss + s_loss
         # logs += 'w_loss: %.2f s_loss: %.2f ' % (w_loss.item(), s_loss.item())
 
-    return errG_total, logs
+    return errG_total, logs, g_losses, w_loss.item(), s_loss.item()
 
 
 ##################################################################
